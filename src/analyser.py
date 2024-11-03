@@ -3,12 +3,18 @@ from typing import Any, Dict, List, Tuple
 from rich.console import Console
 from rich.progress import Progress, SpinnerColumn, TextColumn
 import aiohttp
-from models import CodeAnalysis
-from helper import display_message
+from models import CodeAnalysis, FileInsights
+from helper import display_message, read_python_file
 from constants import (
     ANALYSIS_START_MESSAGE,
     ANALYSIS_COMPLETE_TEMPLATE,
-    PROGRESS_SPINNER_TEXT,  
+    PROGRESS_FILE_TEXT,
+    ANALYSIS_STAGES,
+    PROGRESS_STATUS_TEXT,
+    STAGE_ANALYSIS,
+    STAGE_RECOMMENDATIONS,
+    STAGE_RANKING,
+    STAGE_SUMMARY,
 )
 from api_integration import AIIntegration
 
@@ -91,26 +97,82 @@ class CodeAnalyzer:
     async def _fetch_ai_insights_with_progress(
         self, session: aiohttp.ClientSession, python_files: List[Path]
     ) -> Dict[str, Any]:
-        """Fetches AI insights with progress feedback."""
         if not python_files:
             return {}
-
         insights = {}
-        with Progress(
+        total_files = len(python_files)
+
+        progress_columns = [
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
-            console=self.console,
-        ) as progress:
-            task = progress.add_task(PROGRESS_SPINNER_TEXT, total=len(python_files))
-            for file_path in python_files:
+            TextColumn("•"),
+            TextColumn(
+                "[progress.description]{task.fields[stage]}"
+            ),  
+        ]
+
+        with Progress(*progress_columns, console=self.console) as progress:
+            main_task = progress.add_task(
+                "",
+                total=total_files,
+                stage=ANALYSIS_STAGES[STAGE_ANALYSIS],  
+            )
+
+            for idx, file_path in enumerate(python_files, 1):
                 try:
-                    insights[file_path.name] = await self.ai_integration._analyze_file(
-                        session, file_path
+                    progress.update(
+                        main_task,
+                        description=PROGRESS_FILE_TEXT.format(
+                            current_file=file_path.name, current=idx, total=total_files
+                        ),
+                        stage=ANALYSIS_STAGES[STAGE_ANALYSIS],
                     )
-                    progress.advance(task)
+
+                    # Analysis stage
+                    progress.update(main_task, stage=ANALYSIS_STAGES[STAGE_ANALYSIS])
+                    analysis = await self.ai_integration._get_analysis(
+                        session, file_path, read_python_file(file_path)
+                    )
+
+                    # Recommendations stage
+                    progress.update(
+                        main_task, stage=ANALYSIS_STAGES[STAGE_RECOMMENDATIONS]
+                    )
+                    recommendations = await self.ai_integration._get_recommendations(
+                        session, file_path, analysis
+                    )
+
+                    # Ranking stage
+                    progress.update(main_task, stage=ANALYSIS_STAGES[STAGE_RANKING])
+                    ranked_recs = await self.ai_integration._rank_recommendations(
+                        session, file_path, analysis, recommendations
+                    )
+
+                    # Summary stage
+                    progress.update(main_task, stage=ANALYSIS_STAGES[STAGE_SUMMARY])
+                    summary = await self.ai_integration._summarize_recommendations(
+                        session,
+                        file_path,
+                        "\n".join(f"{r.text} - {r.justification}" for r in ranked_recs),
+                    )
+
+                    insights[file_path.name] = FileInsights(
+                        analysis=analysis,
+                        ranked_recommendations=ranked_recs,
+                        recommendations=summary,
+                    )
+
+                    self.console.print(
+                        PROGRESS_STATUS_TEXT.format(
+                            filename=file_path.name, status="✓ Analysis complete"
+                        )
+                    )
+                    progress.advance(main_task)
+
                 except Exception as e:
                     self.console.print(
                         f"[red]Error analyzing {file_path.name}: {str(e)}[/red]"
                     )
-                    progress.advance(task)
+                    progress.advance(main_task)
+
         return insights

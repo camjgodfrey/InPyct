@@ -15,6 +15,7 @@ from constants import (
     FILE_HEADER_TEMPLATE,
     ANALYSIS_SECTION_HEADER,
     RECOMMENDATIONS_SECTION_HEADER,
+    DEFAULT_ANALYSIS,
 )
 
 
@@ -67,30 +68,33 @@ def handle_analysis_error(console: Console, error: Exception) -> None:
 
 
 def format_ai_insights(ai_insights: Dict[str, FileInsights]) -> str:
-    """Formats the AI insights with enhanced styling."""
     if not ai_insights:
         return NO_AI_INSIGHTS_MESSAGE
 
     sections = []
     for file, insights in ai_insights.items():
-        # Create a section for each file
         section = []
+        # File header
         section.append(FILE_HEADER_TEMPLATE.format(filename=file))
         
-        # Add analysis with header
+        # Analysis section 
         section.append(ANALYSIS_SECTION_HEADER)
-        section.append(insights.analysis)
+        if insights.analysis and insights.analysis != DEFAULT_ANALYSIS:
+            section.append(insights.analysis.replace("[", "\\[").replace("]", "\\]"))
+        else:
+            section.append("[yellow]No analysis available.[/yellow]")
         
-        # Add recommendations with header
+        # Recommendations section
         section.append(RECOMMENDATIONS_SECTION_HEADER)
-        # Split recommendations into bullet points if they contain newlines
-        recommendations = insights.recommendations.split('\n')
-        formatted_recommendations = [
-            f"[yellow]•[/yellow] {rec.strip()}" 
-            for rec in recommendations 
-            if rec.strip()
-        ]
-        section.append('\n'.join(formatted_recommendations))
+        if insights.ranked_recommendations:
+            for rec in insights.ranked_recommendations:
+                section.append(
+                    f"[{rec.priority}] [yellow]•[/yellow] {rec.text.strip()}\n"
+                    f"  [dim]Impact: {rec.impact_score}/5[/dim]\n"
+                    f"  [dim]Justification: {rec.justification.strip()}[/dim]"
+                )
+        else:
+            section.append("[yellow]No recommendations available for this file.[/yellow]")
         
         sections.append('\n'.join(section))
     

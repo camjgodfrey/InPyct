@@ -3,10 +3,17 @@ from typing import Any, Dict, List
 from pathlib import Path
 from constants import DEFAULT_ANALYSIS, DEFAULT_RECOMMENDATIONS
 
+@dataclass
+class RankedRecommendation:
+    text: str
+    priority: str
+    impact_score: int
+    justification: str
 
 @dataclass
 class FileInsights:
     analysis: str = DEFAULT_ANALYSIS
+    ranked_recommendations: List[RankedRecommendation] = field(default_factory=list)
     recommendations: str = DEFAULT_RECOMMENDATIONS
 
 
@@ -17,3 +24,4 @@ class CodeAnalysis:
     total_files: int
     total_dirs: int
     ai_insights: Dict[str, FileInsights] = field(default_factory=dict)
+

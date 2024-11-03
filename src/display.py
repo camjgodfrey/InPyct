@@ -9,7 +9,6 @@ from constants import (
     ANALYSIS_RESULTS_BORDER,
     AI_INSIGHTS_TITLE,
     AI_INSIGHTS_PANEL_BORDER,
-    NO_AI_INSIGHTS_MESSAGE,
 )
 
 
