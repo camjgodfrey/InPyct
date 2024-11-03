@@ -3,7 +3,7 @@ from rich.console import Console
 from rich.panel import Panel
 from rich.prompt import Prompt
 from pathlib import Path
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Tuple
 from models import FileInsights
 from constants import (
     WELCOME_MESSAGE,
@@ -12,6 +12,9 @@ from constants import (
     NO_AI_INSIGHTS_MESSAGE,
     ERROR_API_RESPONSE,
     OLLAMA_API_URL,
+    FILE_HEADER_TEMPLATE,
+    ANALYSIS_SECTION_HEADER,
+    RECOMMENDATIONS_SECTION_HEADER,
 )
 
 
@@ -20,9 +23,16 @@ def display_message(
     message: str,
     title: Optional[str] = None,
     border_style: str = "blue",
+    padding: Tuple[int, int] = (0, 1)
 ) -> None:
-    """Displays a message in a Rich Panel, optionally with a title and border style."""
-    console.print(Panel.fit(message, title=title, border_style=border_style))
+    """Displays a message in a Rich Panel with customizable padding."""
+    panel = Panel(
+        message,
+        title=title,
+        border_style=border_style,
+        padding=padding
+    )
+    console.print(panel)
 
 
 def display_welcome(console: Console) -> None:
@@ -57,23 +67,34 @@ def handle_analysis_error(console: Console, error: Exception) -> None:
 
 
 def format_ai_insights(ai_insights: Dict[str, FileInsights]) -> str:
-    """
-    Formats the AI insights into a structured string for display.
-
-    Args:
-        ai_insights (Dict[str, FileInsights]): Insights by file name.
-
-    Returns:
-        str: Formatted insights or a message if no insights are available.
-    """
+    """Formats the AI insights with enhanced styling."""
     if not ai_insights:
         return NO_AI_INSIGHTS_MESSAGE
 
-    insights_text = [
-        f"### {file}\n**Analysis:**\n{insights.analysis}\n\n**Recommendations:**\n{insights.recommendations}"
-        for file, insights in ai_insights.items()
-    ]
-    return "\n\n".join(insights_text)
+    sections = []
+    for file, insights in ai_insights.items():
+        # Create a section for each file
+        section = []
+        section.append(FILE_HEADER_TEMPLATE.format(filename=file))
+        
+        # Add analysis with header
+        section.append(ANALYSIS_SECTION_HEADER)
+        section.append(insights.analysis)
+        
+        # Add recommendations with header
+        section.append(RECOMMENDATIONS_SECTION_HEADER)
+        # Split recommendations into bullet points if they contain newlines
+        recommendations = insights.recommendations.split('\n')
+        formatted_recommendations = [
+            f"[yellow]•[/yellow] {rec.strip()}" 
+            for rec in recommendations 
+            if rec.strip()
+        ]
+        section.append('\n'.join(formatted_recommendations))
+        
+        sections.append('\n'.join(section))
+    
+    return '\n\n'.join(sections)
 
 
 async def send_ollama_request(

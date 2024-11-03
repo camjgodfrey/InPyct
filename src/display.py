@@ -22,11 +22,22 @@ class DisplayManager:
         if not analysis:
             return
 
-        tree = Tree("[bold blue]Project Root")
+        # Add spacing for better separation
+        self.console.print()
+        
+        # Display tree with enhanced styling
+        tree = Tree("[bold blue]📁 Project Root[/bold blue]")
         self._build_tree_view(analysis.file_tree, tree)
         self.console.print(tree)
-
+        
+        # Add separator
+        self.console.print("\n[dim]" + "─" * 80 + "[/dim]\n")
+        
         self._display_statistics(analysis)
+        
+        # Add separator
+        self.console.print("\n[dim]" + "─" * 80 + "[/dim]\n")
+        
         self._display_insights(analysis)
 
     def _display_statistics(self, analysis: CodeAnalysis) -> None:
@@ -44,14 +55,23 @@ class DisplayManager:
         )
 
     def _display_insights(self, analysis: CodeAnalysis) -> None:
-        """Displays AI insights if available."""
+        """Displays AI insights with enhanced formatting."""
         if analysis.ai_insights:
             insights_text = format_ai_insights(analysis.ai_insights)
+            # Use a panel with a distinctive style
             display_message(
-                self.console, insights_text, AI_INSIGHTS_TITLE, AI_INSIGHTS_PANEL_BORDER
+                self.console,
+                insights_text,
+                AI_INSIGHTS_TITLE,
+                AI_INSIGHTS_PANEL_BORDER,
+                padding=(1, 2)  # Add padding for better readability
             )
         else:
-            display_message(self.console, NO_AI_INSIGHTS_MESSAGE, border_style="yellow")
+            display_message(
+                self.console,
+                "[yellow]No AI insights available for this project.[/yellow]",
+                border_style="yellow"
+            )
 
     def _build_tree_view(self, file_tree: Dict[str, Any], tree: Tree) -> None:
         """Recursively builds the Rich tree view for displaying file structure."""
