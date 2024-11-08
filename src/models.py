@@ -13,6 +13,7 @@ class RankedRecommendation:
 @dataclass
 class FileInsights:
     analysis: str = DEFAULT_ANALYSIS
+    analysis_summary: str = ""
     ranked_recommendations: List[RankedRecommendation] = field(default_factory=list)
     recommendations: str = DEFAULT_RECOMMENDATIONS
 

@@ -95,8 +95,8 @@ class CodeAnalyzer:
             return await self._fetch_ai_insights_with_progress(session, python_files)
 
     async def _fetch_ai_insights_with_progress(
-        self, session: aiohttp.ClientSession, python_files: List[Path]
-    ) -> Dict[str, Any]:
+    self, session: aiohttp.ClientSession, python_files: List[Path]
+) -> Dict[str, Any]:
         if not python_files:
             return {}
         insights = {}
@@ -106,16 +106,14 @@ class CodeAnalyzer:
             SpinnerColumn(),
             TextColumn("[progress.description]{task.description}"),
             TextColumn("•"),
-            TextColumn(
-                "[progress.description]{task.fields[stage]}"
-            ),  
+            TextColumn("[progress.description]{task.fields[stage]}"),
         ]
 
         with Progress(*progress_columns, console=self.console) as progress:
             main_task = progress.add_task(
                 "",
                 total=total_files,
-                stage=ANALYSIS_STAGES[STAGE_ANALYSIS],  
+                stage=ANALYSIS_STAGES[STAGE_ANALYSIS],
             )
 
             for idx, file_path in enumerate(python_files, 1):
@@ -132,6 +130,12 @@ class CodeAnalyzer:
                     progress.update(main_task, stage=ANALYSIS_STAGES[STAGE_ANALYSIS])
                     analysis = await self.ai_integration._get_analysis(
                         session, file_path, read_python_file(file_path)
+                    )
+
+                    # Analysis summary stage
+                    progress.update(main_task, stage="Summarizing analysis")
+                    analysis_summary = await self.ai_integration._summarize_analysis(
+                        session, file_path, analysis
                     )
 
                     # Recommendations stage
@@ -158,6 +162,7 @@ class CodeAnalyzer:
 
                     insights[file_path.name] = FileInsights(
                         analysis=analysis,
+                        analysis_summary=analysis_summary,  # Add the summary
                         ranked_recommendations=ranked_recs,
                         recommendations=summary,
                     )

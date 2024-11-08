@@ -10,10 +10,10 @@ from constants import (
     ANALYSIS_PROMPT_TEMPLATE,
     RECOMMENDATIONS_PROMPT_TEMPLATE,
     SUMMARIZE_PROMPT_TEMPLATE,
-    ERROR_ANALYZING_FILE,
     DEFAULT_RECOMMENDATIONS,
     RANKING_PROMPT_TEMPLATE,
     OLLAMA_MODEL_RANKING,
+    ANALYSIS_SUMMARY_PROMPT_TEMPLATE,
 )
 from helper import send_ollama_request, format_prompt, read_python_file
 
@@ -198,6 +198,46 @@ class AIIntegration:
             self.console.print(f"[red]Error in _rank_recommendations: {str(e)}[/red]")
             return []
 
+    async def _summarize_analysis(
+        self, session: aiohttp.ClientSession, file_path: Path, analysis: str
+    ) -> str:
+        """Summarizes the code analysis into key points."""
+        enhanced_prompt = (
+            "IMPORTANT: DO NOT INCLUDE ANY CODE EXAMPLES OR SNIPPETS IN YOUR RESPONSE.\n\n"
+            + format_prompt(ANALYSIS_SUMMARY_PROMPT_TEMPLATE, analysis=analysis)
+        )
+
+        response = await self._send_request(
+            session,
+            enhanced_prompt,
+            file_path,
+            "analysis_summary",
+            OLLAMA_MODEL_SUMMARIZE
+        )
+
+        cleaned_response = self._clean_response(response)
+
+        # Format checker and fixer
+        if not re.search(r"POINT #\d+:", cleaned_response):
+            self.console.print(
+                f"[yellow]Warning: Reformatting analysis summary for {file_path.name}[/yellow]"
+            )
+
+            # Attempt to structure the response if it contains useful information
+            if cleaned_response:
+                lines = cleaned_response.split("\n")
+                structured_response = []
+
+                for i, line in enumerate(lines, 1):
+                    if line.strip():
+                        structured_response.append(f"POINT #{i}: {line.strip()}\n")
+
+                return "\n".join(structured_response)
+
+            return analysis
+
+        return cleaned_response
+    
     async def _summarize_recommendations(
         self, session: aiohttp.ClientSession, file_path: Path, recommendations: str
     ) -> str:

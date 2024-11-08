@@ -152,6 +152,33 @@ Recommendations:
 Format your response using ONLY the structure shown in the example above.
 '''
 
+ANALYSIS_SUMMARY_PROMPT_TEMPLATE = '''
+You are a code analysis assistant. Summarize the provided code analysis into clear, focused points. Follow these rules EXACTLY:
+
+FORMAT RULES:
+1. Start each key point with "POINT #X:"
+2. Each point must be exactly one paragraph
+3. Focus on significant findings and patterns
+4. Include technical insights but avoid code specifics
+5. Maximum 150 words per point
+6. Separate points with blank lines
+
+EXAMPLE:
+POINT #1: The module implements a robust authentication system with proper separation of concerns, effectively isolating user management logic from the main business logic. The authentication flow follows industry best practices with proper password hashing and session management, though the session timeout configuration could be more flexible.
+
+REQUIREMENTS:
+- No code snippets
+- No bullet points
+- No additional formatting
+- Maximum 5 key points
+- Each point must be actionable or insightful
+
+Analysis:
+{analysis}
+
+Format your response using EXACTLY the structure shown in the example above.
+'''
+
 RANKING_PROMPT_TEMPLATE = '''
 You are a code review assistant tasked with ranking recommendations. Follow these rules EXACTLY.
 

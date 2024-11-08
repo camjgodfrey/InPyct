@@ -77,9 +77,11 @@ def format_ai_insights(ai_insights: Dict[str, FileInsights]) -> str:
         # File header
         section.append(FILE_HEADER_TEMPLATE.format(filename=file))
         
-        # Analysis section 
+        # Analysis section with summary only
         section.append(ANALYSIS_SECTION_HEADER)
-        if insights.analysis and insights.analysis != DEFAULT_ANALYSIS:
+        if insights.analysis_summary and insights.analysis_summary != DEFAULT_ANALYSIS:
+            section.append(insights.analysis_summary.replace("[", "\\[").replace("]", "\\]"))
+        elif insights.analysis and insights.analysis != DEFAULT_ANALYSIS:
             section.append(insights.analysis.replace("[", "\\[").replace("]", "\\]"))
         else:
             section.append("[yellow]No analysis available.[/yellow]")
